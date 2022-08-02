@@ -33,11 +33,9 @@ class PCIDSS(Generic):
     return baseline_pcidss_list
 
   def transform(self, regime, regime_list):
-    stmts = []
     regime_name = regime['description']
 
-    stmts.append(self.create_regime(regime_name))
-
+    stmts = [self.create_regime(regime_name)]
     for control_dict in regime_list:
       c = control_dict.copy()
       c = self.clean_dict(c)
@@ -51,11 +49,7 @@ class PCIDSS(Generic):
         parent = c['parent']
         del c['parent']
 
-        if not len(c['name'].split('.')) > 2:
-          parent_type = 'family'
-        else:
-          parent_type = 'control'
-
+        parent_type = 'family' if len(c['name'].split('.')) <= 2 else 'control'
         stmts.append(self.create_geneirc_control(regime_name,
                                                  parent_type,
                                                  parent,

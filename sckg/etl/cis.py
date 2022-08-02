@@ -7,10 +7,8 @@ class CIS(Generic):
     super().__init__(config)
 
   def transform(self, regime, regime_list):
-    stmts = []
     regime_name = regime['description']
-    stmts.append(self.create_regime(regime_name))
-
+    stmts = [self.create_regime(regime_name)]
     # create the controls and families
     for control_dict in regime_list:
       c = control_dict.copy()
@@ -40,26 +38,23 @@ class CIS(Generic):
       baselines = {'implementation_group_1': 'Implementation Group 1',
                    'implementation_group_2': 'Implementation Group 2',
                    'implementation_group_3': 'Implementation Group 3'}
-      for key in baselines.keys():
+      for key in baselines:
         if c.get(key):
-          stmts.append(
-              self.create_regime_baseline(regime_name,
-                                          properties={
-                                            'name': baselines[key]
-                                          })
-          )
-          stmts.append(
-              self.create_baseline_control(regime_name,
-                                           baselines[key],
-                                           regime_name,
-                                           c['cis_sub_control'],
-                                           properties={})
-          )
-
+          stmts.extend((
+              self.create_regime_baseline(
+                  regime_name, properties={'name': baselines[key]}),
+              self.create_baseline_control(
+                  regime_name,
+                  baselines[key],
+                  regime_name,
+                  c['cis_sub_control'],
+                  properties={},
+              ),
+          ))
       baselines = {'asset_type': 'Asset Type',
                    'security_function': 'Security Function'}
 
-      for key in baselines.keys():
+      for key in baselines:
         if c.get(key):
           stmts.append(
               self.create_regime_baseline(regime_name,
@@ -69,18 +64,19 @@ class CIS(Generic):
           )
 
           baseline_baseline_properties = {'name': c[key]}
-          stmts.append(
-              self.create_baseline_baseline(regime_name,
-                                            baselines[key],
-                                            properties=baseline_baseline_properties)
-          )
-          stmts.append(
-              self.create_baseline_control(regime_name,
-                                           c[key],
-                                           regime_name,
-                                           c['cis_sub_control'],
-                                           properties={})
-          )
-
+          stmts.extend((
+              self.create_baseline_baseline(
+                  regime_name,
+                  baselines[key],
+                  properties=baseline_baseline_properties,
+              ),
+              self.create_baseline_control(
+                  regime_name,
+                  c[key],
+                  regime_name,
+                  c['cis_sub_control'],
+                  properties={},
+              ),
+          ))
     return stmts
 

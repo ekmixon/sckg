@@ -32,8 +32,7 @@ class TestConfigETL(unittest.TestCase):
     result = self.neo4j.execute_cypher(query)
     controls = []
     for r in result:
-      for n in r:
-        controls.append(n.get('name'))
+      controls.extend(n.get('name') for n in r)
     return controls
 
   def get_regime(self, name):

@@ -59,7 +59,7 @@ class Neo4j(object):
     """
     with self.driver.session() as session:
       if self.debug:
-        print(stmt + ';')
+        print(f'{stmt};')
       result = session.run(stmt)
 
       if count:
@@ -71,11 +71,11 @@ class Neo4j(object):
           nodes_created = r[0]
           edges_created = r[1]
         if self.debug:
-          print('// nodes created: ' + str(max(0, nodes_created - self.node_count)))
+          print(f'// nodes created: {str(max(0, nodes_created - self.node_count))}')
         if max(0, nodes_created - self.node_count) > 0:
           self.node_count = nodes_created
         if self.debug:
-          print('// edges created: ' + str(max(0, edges_created - self.edge_count)))
+          print(f'// edges created: {str(max(0, edges_created - self.edge_count))}')
         if max(0, edges_created - self.edge_count) > 0:
           self.edge_count = edges_created
 

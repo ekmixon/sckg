@@ -49,8 +49,8 @@ class TestConfigYaml(unittest.TestCase):
           os.path.isdir((parsable_document))
       )
 
-      if os.path.isfile(parsable_document) and regime.get('baseline') and \
-          not 'XML' in magic.from_file(parsable_document):
+      if (os.path.isfile(parsable_document) and regime.get('baseline')
+          and 'XML' not in magic.from_file(parsable_document)):
         with open(parsable_document, 'r') as f:
           lines = f.readlines()
         uid_key = regime.get('baseline').get('uid_key')

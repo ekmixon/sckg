@@ -37,8 +37,7 @@ class STIG(Generic):
     regime_name = 'STIG'
     stig_name = regime['description']
 
-    stmts = []
-    stmts.append(self.create_regime(regime_name))
+    stmts = [self.create_regime(regime_name)]
     stmts.append(
         self.create_regime_baseline(regime_name,
                                     properties={

@@ -62,19 +62,18 @@ class NIST80053(Generic):
       control_dict['family'] = family
 
       if '(' in name:
-        # it's an enhancement
-        name_parts = list(filter(None, name.replace(control, '')
-                                 .replace(' ', '')
-                                 .replace(')', '')
-                                 .split('(')))
-        # len 0 means family
-        if len(name_parts) > 0:
+        if name_parts := list(
+            filter(
+                None,
+                name.replace(control,
+                             '').replace(' ', '').replace(')', '').split('('),
+            )):
           # last_part = name_parts[-1]
           del name_parts[-1]
 
           enhancement = ' '
           for part in name_parts:
-            enhancement = enhancement + '(' + part + ')'
+            enhancement = f'{enhancement}({part})'
           parent = control + enhancement
           if parent.endswith(' '):
             parent = parent.replace(' ', '')
@@ -86,7 +85,7 @@ class NIST80053(Generic):
         parent = None
 
         # len 0 means family
-        if len(name_parts) == 0:
+        if not name_parts:
           pass
         elif len(name_parts) == 1:
           parent = control
@@ -97,7 +96,7 @@ class NIST80053(Generic):
 
           multipart = ''
           for part in name_parts:
-            multipart = part + '.'
+            multipart = f'{part}.'
           parent = control + multipart
           control_dict['parent'] = parent
 
@@ -126,16 +125,10 @@ class NIST80053(Generic):
     # increases the number of relationships for this regime.
     render_related = regime['meta']['render_related']
 
-    # this currently breaks our convention of returning lists
-    # todo: change this logic and load method to use lists so we match the
-    #  other claseses
-    stmts = {}
-
     # create regime node
     regime_name = regime['description']
     stmt = self.create_regime(regime_name)
-    stmts['regime'] = stmt
-
+    stmts = {'regime': stmt}
     # create families. we're using the config metadata for this regime.
     # currently 800-53 is the only regime that has this config attribute due
     # to the fact that the family names are impossible to infer from the

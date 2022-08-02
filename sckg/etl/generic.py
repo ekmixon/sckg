@@ -39,9 +39,7 @@ class Generic(object):
     with open(parsable_document, 'r') as f:
       rows = f.readlines()
 
-    regime_list = self.parse_baseline(rows)
-
-    return regime_list
+    return self.parse_baseline(rows)
 
   def transform(self, regime, regime_list):
     """transform method
@@ -66,9 +64,9 @@ class Generic(object):
                                           baseline['uid_key'],
                                           regime_list)
     else:
-      raise Exception('no baseline for regime "{}" in config.yml. \n'
-                      'generic transform currently only supports '
-                      'baselines'.format(regime['name']))
+      raise Exception(
+          f"""no baseline for regime "{regime['name']}" in config.yml. \ngeneric transform currently only supports baselines"""
+      )
 
   def load(self, regime, neo4j, stmts):
     """load method
@@ -117,8 +115,8 @@ class Generic(object):
     for dir_name, subdir_list, file_list in os.walk(d):
       if len(subdir_list) > 0:
         for subdirectory in subdir_list:
-          f = f + self.get_dir_files(d + '/' + subdirectory)
-      f = f + list(map(lambda x: d + '/' + x, file_list))
+          f = f + self.get_dir_files(f'{d}/{subdirectory}')
+      f = f + list(map(lambda x: f'{d}/{x}', file_list))
       return f
 
   def get_regime_description(self, name):
@@ -139,10 +137,10 @@ class Generic(object):
     Raises:
       None
     """
-    for r in self.config['regimes']:
-      if r['name'] == name:
-        return r['description']
-    return None
+    return next(
+        (r['description'] for r in self.config['regimes'] if r['name'] == name),
+        None,
+    )
 
   def get_control_regime_name(self, regime):
     """getter for a regime's baseline's control regime
@@ -160,10 +158,11 @@ class Generic(object):
         None
     """
     control_regime = regime['baseline']['control_regime']
-    for r in self.config['regimes']:
-      if r['name'] == control_regime:
-        return r['description']
-    return None
+    return next(
+        (r['description']
+         for r in self.config['regimes'] if r['name'] == control_regime),
+        None,
+    )
 
   def get_field_names(self, first_row: str):
     """getter for a parsable_document's first row field names
@@ -177,11 +176,10 @@ class Generic(object):
     Raises:
       None
     """
-    # function for generating clean field names
-    fields = []
-    for field in first_row.rstrip().split('\t'):
-      fields.append(field.lower().replace(' ', '_').replace('-', '_'))
-    return fields
+    return [
+        field.lower().replace(' ', '_').replace('-', '_')
+        for field in first_row.rstrip().split('\t')
+    ]
 
   def parse_baseline(self, rows):
     """method to parse a generic tab-delimited tsv file
@@ -204,7 +202,7 @@ class Generic(object):
       row_dict = {}
       cols = row.rstrip().split('\t')
       for i in range(len(cols)):
-        if cols[i] == '' or cols[i] == ' ':
+        if cols[i] in ['', ' ']:
           # skip blank fields
           continue
         row_dict[fields[i]] = cols[i]
@@ -233,13 +231,10 @@ class Generic(object):
     p = []
     if kwargs.get('properties'):
       # if we've provided a properties dict, use that
-      for key in kwargs['properties']:
-        p.append((key, kwargs['properties'][key]))
+      p.extend((key, kwargs['properties'][key]) for key in kwargs['properties'])
     else:
       # otherwise build one from the provided kwargs
-      for key in kwargs.keys():
-        p.append((key, kwargs[key]))
-
+      p.extend((key, value) for key, value in kwargs.items())
     return Template(j2t.rstrip()).render(args=args,
                                          names=kwargs.get('names', {}),
                                          properties=p)
@@ -273,7 +268,7 @@ class Generic(object):
       """
       return s.replace('\\', '\\\\').replace("'", "\\'").replace('\n', ' ')
 
-    for key in d.keys():
+    for key in d:
       if isinstance(d[key], dict):
         # nested dict, recurse
         d[key] = self.clean_dict(d[key])
@@ -297,32 +292,23 @@ class Generic(object):
   # no point in commenting functions that are about to be replaced...
 
   def create_regime(self, regime):
-    stmt = self.render_template('regime.j2',
-                                name=regime)
-    return stmt
+    return self.render_template('regime.j2', name=regime)
 
   def create_regime_family(self, regime, properties):
-    stmt = self.render_template('regime_family.j2', regime,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'regime_family.j2', regime, properties=properties)
 
   def create_baseline_baseline(self, regime, parent_baseline, properties):
-    stmt = self.render_template('baseline_baseline.j2',
-                                regime,
-                                parent_baseline,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'baseline_baseline.j2', regime, parent_baseline, properties=properties)
 
   def create_regime_baseline(self, regime, properties):
-    stmt = self.render_template('regime_baseline.j2',
-                                regime,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'regime_baseline.j2', regime, properties=properties)
 
   def create_generic_baseline(self, regime, control_regime, baseline, uid_key,
       regime_list):
-    stmts = []
-    stmts.append(self.create_regime(regime))
+    stmts = [self.create_regime(regime)]
     stmts.append(
         self.create_regime_baseline(regime, properties={'name': baseline}))
     for control_dict in regime_list:
@@ -340,42 +326,48 @@ class Generic(object):
 
   def create_geneirc_control(self, regime, parent, parent_name, properties):
     properties = self.clean_dict(properties)
-    stmt = self.render_template('control.j2',
-                                regime, parent, parent_name,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'control.j2', regime, parent, parent_name, properties=properties)
 
   def create_baseline_control(self, regime, baseline, control_regime, control,
       properties):
-    stmt = self.render_template('baseline_control.j2',
-                                regime, baseline,
-                                control_regime, control,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'baseline_control.j2',
+        regime,
+        baseline,
+        control_regime,
+        control,
+        properties=properties,
+    )
 
   def create_baseline_wildcard(self, regime, baseline, control_regime, control,
       properties):
-    stmt = self.render_template('baseline_wildcard.j2',
-                                regime, baseline,
-                                control_regime, control,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'baseline_wildcard.j2',
+        regime,
+        baseline,
+        control_regime,
+        control,
+        properties=properties,
+    )
 
   def create_baseline_newcontrol(self, regime, regime_section, control_regime,
       control, parent_name, **kwargs):
     properties = kwargs.get('properties', {})
-    stmt = self.render_template('baseline_newcontrol.j2',
-                                regime, regime_section, control_regime,
-                                control, parent_name,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'baseline_newcontrol.j2',
+        regime,
+        regime_section,
+        control_regime,
+        control,
+        parent_name,
+        properties=properties,
+    )
 
   def create_baseline_has_control(self, regime, baseline, **kwargs):
     properties = kwargs.get('properties', {})
-    stmt = self.render_template('baseline_has_control.j2',
-                                regime, baseline,
-                                properties=properties)
-    return stmt
+    return self.render_template(
+        'baseline_has_control.j2', regime, baseline, properties=properties)
 
   def create_baseline_dummy_control(self,
       control_regime,
@@ -385,19 +377,21 @@ class Generic(object):
       regime,
       regime_baseline,
       **kwargs):
-    properties = kwargs.get('properties', None)
-    stmt = self.render_template('baseline_dummy_control.j2',
-                                control_regime,
-                                control_regime_has_baseline,
-                                control_baseline,
-                                control,
-                                regime,
-                                regime_baseline,
-                                properties=properties)
-    return stmt
+    properties = kwargs.get('properties')
+    return self.render_template(
+        'baseline_dummy_control.j2',
+        control_regime,
+        control_regime_has_baseline,
+        control_baseline,
+        control,
+        regime,
+        regime_baseline,
+        properties=properties,
+    )
 
   def create_control_control_map(self, **kwargs):
-    stmt = self.render_template('control_control_map.j2',
-                                names=kwargs['names'],
-                                properties=kwargs['properties'])
-    return stmt
+    return self.render_template(
+        'control_control_map.j2',
+        names=kwargs['names'],
+        properties=kwargs['properties'],
+    )

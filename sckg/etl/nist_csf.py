@@ -7,36 +7,24 @@ class NISTCSF(Generic):
     super().__init__(config)
 
   def get_references(self, regime_string, ref_string):
-    return ref_string.replace(regime_string + ' ', '').split(', ')
+    return ref_string.replace(f'{regime_string} ', '').split(', ')
 
   def transform(self, regime, regime_list):
-    stmts = []
-
     regime_name = regime['description']
-    stmts.append(self.create_regime(regime_name))
-
+    stmts = [self.create_regime(regime_name)]
     for control_dict in regime_list:
       c = control_dict.copy()
-      stmts.append(
-          self.create_regime_baseline(regime_name,
-                                      properties={
-                                        'name': c['function']
-                                      })
-      )
-      stmts.append(
-          self.create_baseline_baseline(regime_name,
-                                        c['function'],
-                                        properties={
-                                          'name': c['category']
-                                        })
-      )
-      stmts.append(
-          self.create_baseline_baseline(regime_name,
-                                        c['category'],
-                                        properties={
-                                          'name': c['subcategory']
-                                        })
-      )
+      stmts.extend((
+          self.create_regime_baseline(
+              regime_name, properties={'name': c['function']}),
+          self.create_baseline_baseline(
+              regime_name, c['function'], properties={'name': c['category']}),
+          self.create_baseline_baseline(
+              regime_name,
+              c['category'],
+              properties={'name': c['subcategory']},
+          ),
+      ))
       # todo: handle derived regimes differently than ETLed regimes
       for ref_regime in ['CIS CSC',
                          'COBIT 5',
@@ -59,29 +47,27 @@ class NISTCSF(Generic):
                 ref = 'NIST 800-53'
               elif ref == 'PCI DSS v3.2':
                 ref = 'PCI DSS'
-              stmts.append(
-                  self.create_regime(ref)
-              )
-              stmts.append(
-                  self.create_baseline_wildcard(regime_name,
-                                                c['subcategory'],
-                                                ref,
-                                                reference,
-                                                properties={})
-              )
+              stmts.extend((
+                  self.create_regime(ref),
+                  self.create_baseline_wildcard(
+                      regime_name,
+                      c['subcategory'],
+                      ref,
+                      reference,
+                      properties={},
+                  ),
+              ))
             else:
-              stmts.append(
-                  self.create_regime(ref)
-              )
-              stmts.append(
+              stmts.extend((
+                  self.create_regime(ref),
                   self.create_baseline_dummy_control(
                       ref,
                       False,
                       False,
                       reference,
                       regime_name,
-                      c['subcategory'])
-              )
-
+                      c['subcategory'],
+                  ),
+              ))
     return stmts
 

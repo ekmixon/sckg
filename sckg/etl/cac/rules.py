@@ -38,7 +38,7 @@ class Rules(Generic):
             # don't process blank lines
             processed = processed + line + '\n'
             continue
-          elif line == 'medium' or line == 'high':
+          elif line in ['medium', 'high']:
             # these are artifacts of tossing the template logic
             continue
           elif line.lstrip().startswith('DISCARDED_LOGIC'):
@@ -57,7 +57,7 @@ class Rules(Generic):
 
               # append the processed line to our buffer
               processed = processed + (' ' * leading_whitespace) \
-                          + line.lstrip() + '\n'
+                            + line.lstrip() + '\n'
           else:
             # don't process
             processed = processed + line + '\n'
@@ -92,9 +92,7 @@ class Rules(Generic):
 
         # flatten warnings into string
         if properties.get('warnings'):
-          warnings = []
-          for warning in properties['warnings']:
-            warnings.append(self.flatten_dict(warning))
+          warnings = [self.flatten_dict(warning) for warning in properties['warnings']]
           properties['warnings'] = '; '.join(warnings)
 
         # flatten CCE identifiers into a string
@@ -109,23 +107,17 @@ class Rules(Generic):
               properties['template']
           )
 
-        # statement to create this control
-        stmts.append(
-            self.create_regime('ComplianceAsCode')
-        )
-        stmts.append(
-            self.create_regime_baseline('ComplianceAsCode',
-                                        properties={
-                                          'name': 'Rules'
-                                        })
-        )
-        stmts.append(
-            self.create_geneirc_control('ComplianceAsCode',
-                                        'baseline',
-                                        'Rules',
-                                        properties=properties)
-        )
-
+        stmts.extend((
+            self.create_regime('ComplianceAsCode'),
+            self.create_regime_baseline(
+                'ComplianceAsCode', properties={'name': 'Rules'}),
+            self.create_geneirc_control(
+                'ComplianceAsCode',
+                'baseline',
+                'Rules',
+                properties=properties,
+            ),
+        ))
         # statement to create the referenced regimes
         # todo: find a way to differentiate complete regimes and derived ones
         extant_regimes = {
@@ -146,40 +138,30 @@ class Rules(Generic):
 
           # create the regime_name and control we don't yet have mapped
           if not extant_regimes.get(regime_name):
-            stmts.append(
-                self.create_regime(referenced_regime)
-            )
-            stmts.append(
-                self.create_regime_baseline(referenced_regime,
-                                            properties={
-                                              'name': 'derived'
-                                            })
-            )
-            for control in references[regime_name].split(','):
-              stmts.append(
-                  self.create_geneirc_control(referenced_regime,
-                                              'baseline',
-                                              'derived',
-                                              properties={
-                                                'name': control
-                                              })
-              )
-
+            stmts.extend((
+                self.create_regime(referenced_regime),
+                self.create_regime_baseline(
+                    referenced_regime, properties={'name': 'derived'}),
+            ))
+            stmts.extend(
+                self.create_geneirc_control(
+                    referenced_regime,
+                    'baseline',
+                    'derived',
+                    properties={'name': control},
+                ) for control in references[regime_name].split(','))
           # map the references
-          for control in references[regime_name].split(','):
-            stmts.append(
-                self.create_control_control_map(
-                    names={
+          stmts.extend(
+              self.create_control_control_map(
+                  names={
                       'by_regime': True,
                       'mapping_regime': 'ComplianceAsCode',
                       'mapping_control': properties['name'],
                       'mapped_regime': referenced_regime,
                       'mapped_control': control,
-                      'relationship': 'REFERENCES'
-                    },
-                    properties={}
-                )
-            )
-
+                      'relationship': 'REFERENCES',
+                  },
+                  properties={},
+              ) for control in references[regime_name].split(','))
     return stmts
 

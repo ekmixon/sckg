@@ -8,51 +8,34 @@ class DoDSRG(Generic):
 
   def parameter_search(self, r, c):
     for x in r:
-      if x.get('parameters'):
-        if x['control'] == c:
-          x = self.clean_dict(x)
-          return x.get('parameters')
+      if x.get('parameters') and x['control'] == c:
+        x = self.clean_dict(x)
+        return x.get('parameters')
     return ''
 
   def transform(self, regime, regime_list):
-    stmts = []
     regime_name = regime['description']
     control_regime = self.get_control_regime_name(regime)
-    
-    stmts.append(
-        self.create_regime(regime_name)
-    )
-    stmts.append(
-        self.create_regime_baseline(regime_name,
-                                    properties={'name': 'Impact Level 4'})
-    )
-    stmts.append(
-        self.create_regime_baseline(regime_name,
-                                    properties={'name': 'Impact Level 5'})
-    )
-    stmts.append(
-        self.create_regime_baseline(regime_name,
-                                    properties={'name': 'Impact Level 6'})
-    )
-    stmts.append(
-        self.create_regime_baseline(regime_name,
-                                    properties={'name': 'Sections'})
-    )
-    stmts.append(
-        self.create_baseline_baseline(regime_name,
-                                      'Sections',
-                                      properties={'name': '5'})
-    )
-    stmts.append(
-        self.create_baseline_baseline(regime_name,
-                                      'Sections',
-                                      properties={'name': '6'})
-    )
 
+    stmts = [
+        self.create_regime(regime_name),
+        self.create_regime_baseline(
+            regime_name, properties={'name': 'Impact Level 4'}),
+        self.create_regime_baseline(
+            regime_name, properties={'name': 'Impact Level 5'}),
+        self.create_regime_baseline(
+            regime_name, properties={'name': 'Impact Level 6'}),
+        self.create_regime_baseline(
+            regime_name, properties={'name': 'Sections'}),
+        self.create_baseline_baseline(
+            regime_name, 'Sections', properties={'name': '5'}),
+        self.create_baseline_baseline(
+            regime_name, 'Sections', properties={'name': '6'}),
+    ]
     for control_dict in regime_list:
       c = self.clean_dict(control_dict.copy())
       if c.get('section'):
-        if not 'DoD-SRG' in c['control']:
+        if 'DoD-SRG' not in c['control']:
           # it's a NIST 800-53 reference
           if c.get('level_4'):
             stmts.append(
@@ -98,7 +81,7 @@ class DoDSRG(Generic):
           section_parts = c['section'].split('.')
           handled_parts = []
           for part in section_parts:
-            if len(handled_parts) > 0:
+            if handled_parts:
               stmts.append(
                   self.create_baseline_baseline(regime_name,
                                                 '.'.join(handled_parts),
@@ -144,8 +127,5 @@ class DoDSRG(Generic):
                                              c['control'],
                                              properties={})
             )
-      elif c.get('parameters'):
-        pass
-
     return stmts
 

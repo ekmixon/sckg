@@ -39,11 +39,8 @@ class Bash(Generic):
 
   def transform(self, regime, regime_list):
     regime_name = regime['description']
-    stmts = []
+    stmts = [self.create_regime('ComplianceAsCode')]
 
-    stmts.append(
-        self.create_regime('ComplianceAsCode')
-    )
     stmts.append(
         self.create_regime_baseline('ComplianceAsCode',
                                     properties={
